@@ -86,7 +86,7 @@ decoded = decode_frame(hex_to_frame(hex_str))
 ATBP frames are transport-agnostic. Current transports:
 
 1. **WhatsApp hex string** — frames encoded as 16-char uppercase hex, delivered over group chat
-2. **Unix socket** — raw binary frames over `/tmp/atbp.sock` (planned)
+2. **Unix socket** — raw binary frames over `/tmp/atbp.sock` (active — live decoder by TARS)
 
 ## Protocol History
 
