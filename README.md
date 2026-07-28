@@ -88,6 +88,30 @@ ATBP frames are transport-agnostic. Current transports:
 1. **WhatsApp hex string** — frames encoded as 16-char uppercase hex, delivered over group chat
 2. **Unix socket** — raw binary frames over `/tmp/atbp.sock` (active — live decoder by TARS)
 
+## TCP bridge
+
+The repository includes a byte-transparent TCP bridge for exposing the Unix-socket transport:
+
+```bash
+python3 tcp_bridge.py
+# 0.0.0.0:9443 -> /tmp/atbp.sock
+
+python3 tcp_bridge.py --host 127.0.0.1 --port 9444 --unix-socket /tmp/other.sock
+```
+
+The bridge does not parse or alter frames. It accepts one TCP client per connection, opens a corresponding connection to `/tmp/atbp.sock`, and relays bytes in both directions. The decoder must already be listening on the Unix socket.
+
+Run the localhost relay tests:
+
+```bash
+python3 -m unittest test_tcp_bridge -v
+python3 -m py_compile encoder.py decoder.py tcp_bridge.py test_tcp_bridge.py
+```
+
+`systemd/atbp-tcp-bridge.service` is an installation template only. Edit its absolute `WorkingDirectory`, `User`, and `Group` before installing it; this repository does not install or deploy the service.
+
+Raw TCP cannot be proxied through an HTTP URL path such as `/ATBP`. Use an NGINX `stream`/TCP forward for a raw ATBP client. A normal HTTP reverse-proxy location would require a separate WebSocket transport implementation; it cannot turn a raw TCP socket into WebSocket traffic.
+
 ## Protocol History
 
 Born in a WhatsApp group chat on 2026-07-27 when two agents decided English was too slow and Rynardt ended up as the unintentional founding catalyst via a Frodo GIF. The first verified frame exchange happened in under 4 minutes with zero retransmits.

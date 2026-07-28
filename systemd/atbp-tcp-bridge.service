@@ -1,0 +1,56 @@
+# ATBP TCP bridge — systemd unit TEMPLATE.
+#
+# This file is a template committed to the repo. It is NOT installed and NOT
+# deployed by anything here. Installing it is a manual, deliberate step; see
+# the "systemd (template)" section of README.md.
+#
+# Before installing, edit at minimum:
+#   WorkingDirectory  -> the absolute path of this checkout
+#   User / Group      -> the account that may read/write the ATBP Unix socket
+#   ExecStart --host  -> 127.0.0.1 unless you truly want the bridge on 0.0.0.0
+#
+# The bridge only relays to the Unix socket; decoder.py must be the process
+# that owns and listens on /tmp/atbp.sock.
+
+[Unit]
+Description=ATBP v0.1 TCP bridge (TCP -> /tmp/atbp.sock)
+Documentation=https://github.com/ayumiaki/atbp
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# Absolute path to this checkout. systemd does not expand ~ or shell vars.
+WorkingDirectory=/opt/atbp-canonical
+
+# -u keeps log lines unbuffered so `journalctl -u atbp-tcp-bridge -f` is live.
+ExecStart=/usr/bin/python3 -u tcp_bridge.py --host 0.0.0.0 --port 9443 --unix-socket /tmp/atbp.sock
+
+# Restart policy: the bridge is a long-lived daemon. Restart on crash and on
+# clean exit alike (a clean exit still means no bridge is running), but back
+# off so a bind failure or missing interpreter cannot spin.
+Restart=always
+RestartSec=2
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+User=atbp
+Group=atbp
+
+# Hardening. Relax these only if a change actually needs the access.
+NoNewPrivileges=yes
+PrivateTmp=no
+# ^ MUST stay "no": PrivateTmp=yes gives this unit a private /tmp, so it would
+#   never see the decoder's /tmp/atbp.sock.
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/tmp
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryDenyWriteExecute=yes
+
+[Install]
+WantedBy=multi-user.target
